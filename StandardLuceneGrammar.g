@@ -72,135 +72,83 @@ tokens {
 }
 
 mainQ :
-  clauseOr+ EOF -> ^(OPERATOR["DEFOP"] clauseOr+)
+  clauseDefault EOF
   ;
 
+clauseDefault
+  :
+  //m:(a b AND c OR d OR e)
+  // without duplicating the rules (but it allows recursion)
+  clauseOr (clauseOr)*
+  ;
 
 clauseOr
-  : (first=clauseAnd -> $first) (or_ others=clauseAnd -> ^(OPERATOR["OR"] clauseAnd+ ))*
+  : clauseAnd (or_ clauseAnd)*
   ;
 
 clauseAnd
-  : (first=clauseNot  -> $first) (and_ others=clauseNot -> ^(OPERATOR["AND"] clauseNot+ ))*
+  : clauseNot (and_ clauseNot)*
   ;
 
 clauseNot
-  : (first=clauseBasic -> $first) (not_ others=clauseBasic -> ^(OPERATOR["NOT"] clauseBasic+) )*
+  : clauseBasic (not_ clauseBasic)*
   ;
 
 clauseBasic
   :
-  modifier? LPAREN clauseOr+ RPAREN term_modifier?
-   -> ^(CLAUSE ^(MODIFIER modifier? ^(TMODIFIER term_modifier? ^(OPERATOR["DEFOP"] clauseOr+)))) // Default operator
-  | LPAREN clauseOr+ RPAREN
-   -> clauseOr+
+  modifier? LPAREN clauseDefault RPAREN term_modifier?
   | atom
   ;
 
 atom
   :
   modifier? field multi_value term_modifier?
-   -> ^(CLAUSE ^(MODIFIER modifier? ^(TMODIFIER term_modifier? ^(FIELD field multi_value))))
   | modifier? field? value term_modifier?
-   -> ^(MODIFIER modifier? ^(TMODIFIER term_modifier? ^(FIELD field? value)))
   ;
 
 field
   :
-  TERM_NORMAL COLON -> TERM_NORMAL
+  TERM_NORMAL COLON
   ;
 
 value
   :
-  range_term_in -> ^(QRANGEIN range_term_in)
-  | range_term_ex -> ^(QRANGEEX range_term_ex)
-  | normal -> ^(QNORMAL normal)
-  | truncated -> ^(QTRUNCATED truncated)
-  | quoted -> ^(QPHRASE quoted)
-  | quoted_truncated -> ^(QPHRASETRUNC quoted_truncated)
-  | QMARK -> ^(QTRUNCATED QMARK)
-  | STAR COLON b=STAR -> ^(QANYTHING $b)
-  | STAR -> ^(QTRUNCATED STAR)
+  range_term
+  | normal
+  | truncated
+  | quoted
+  | quoted_truncated
+  | QMARK
+  | anything
+  | STAR
   ;
 
-range_term_in
+anything
   :
-       LBRACK
-       (a=range_value -> range_value ^(QANYTHING QANYTHING["*"]))
-       ( TO? b=range_value -> $a $b? )?
-       RBRACK
+  STAR COLON STAR
   ;
 
-range_term_ex
+range_term
   :
-  LCURLY
-  ( a=range_value -> range_value ^(QANYTHING QANYTHING["*"]))
-  ( TO? b=range_value -> $a $b? )?
-  RCURLY
+  start_type=(LBRACK|LCURLY)
+  (a=range_value)
+  ( TO? b=range_value )?
+  end_type=(RBRACK|RCURLY)
   ;
 
 range_value
   :
-  truncated -> ^(QTRUNCATED truncated)
-  | quoted -> ^(QPHRASE quoted)
-  | quoted_truncated -> ^(QPHRASETRUNC quoted_truncated)
-  | date -> ^(QNORMAL date)
-  | normal -> ^(QNORMAL normal)
-  | STAR -> ^(QANYTHING STAR)
+  truncated
+  | quoted
+  | quoted_truncated
+  | date
+  | normal
+  | STAR
   ;
 
 multi_value
   :
-  LPAREN multiClause RPAREN -> multiClause
-  ;
-
-multiClause
-  :
-
-  //m:(a b AND c OR d OR e)
-
-  // without duplicating the rules (but it allows recursion)
-  clauseOr+ -> ^(OPERATOR["DEFOP"] clauseOr+)
-
-  // allows only limited set of operations
-  //multiDefault
-
-  // this is also working, but i want operator precedence
-  //multiClause:
-  //(mterm+ -> mterm+)
-  //(op=operator rhs=fclause -> ^(OPERATOR ^(OPERATOR["DEFOP"] $mclause) $rhs))?
-  //;
-  //flause:mclause;
-  ;
-
-multiDefault
-  :
-  multiOr+ -> ^(OPERATOR["DEFOP"] multiOr+)
-  ;
-
-multiOr
-  :
-  (first=multiAnd  -> $first) (or_ others=multiAnd-> ^(OPERATOR["OR"] multiAnd+ ))*
-  ;
-
-multiAnd
-  :
-  (first=multiNot  -> $first) (and_ others=multiNot -> ^(OPERATOR["AND"] multiNot+ ))*
-  ;
-
-multiNot
-  :
-  (first=multiBasic  -> $first) (not_ others=multiBasic-> ^(not_ multiBasic+ ))*
-  ;
-
-multiBasic
-  :
-  mterm
-  ;
-
-mterm
-  :
-  modifier? value -> ^(MODIFIER modifier? value)
+  LPAREN clauseDefault RPAREN
   ;
 
 normal
@@ -223,29 +171,23 @@ quoted  :
   PHRASE
   ;
 
-operator: (
-  AND -> OPERATOR["AND"]
-  | OR -> OPERATOR["OR"]
-  | NOT -> OPERATOR["NOT"]
-  );
-
 modifier:
-  PLUS -> PLUS["+"]
-  | MINUS -> MINUS["-"];
+  PLUS
+  | MINUS;
 
 term_modifier :
-  TILDE CARAT? -> ^(BOOST CARAT?) ^(FUZZY TILDE)
-  | CARAT TILDE? -> ^(BOOST CARAT) ^(FUZZY TILDE?)
+  boost fuzzy?
+  | fuzzy boost?
   ;
 
 boost :
-  (CARAT -> ^(BOOST NUMBER["DEF"])) // set the default value
-  (NUMBER -> ^(BOOST NUMBER))? //replace the default with user input
+  (CARAT) // set the default value
+  (NUMBER)? //replace the default with user input
   ;
 
 fuzzy :
-  (TILDE -> ^(FUZZY NUMBER["DEF"])) // set the default value
-  (NUMBER -> ^(FUZZY NUMBER))? //replace the default with user input
+  (TILDE) // set the default value
+  (NUMBER)? //replace the default with user input
   ;
 
 not_  :
@@ -262,7 +204,6 @@ or_   :
   ;
 
 date  :
-  //a=NUMBER '/' b=NUMBER '/' c=NUMBER -> ^(QDATE $a $b $c)
   DATE_TOKEN
   ;
 
