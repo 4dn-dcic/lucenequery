@@ -49,50 +49,27 @@ grammar StandardLuceneGrammar;
 //
 
 options {
-  language = Java;
-  output = AST;
-  superClass = UnforgivingParser;
+  language = Python2;
 }
 
 tokens {
-  OPERATOR;
-  ATOM;
-  MODIFIER;
-  TMODIFIER;
-  CLAUSE;
-  FIELD;
-  FUZZY;
-  BOOST;
-  QNORMAL;
-  QPHRASE;
-  QPHRASETRUNC;
-  QTRUNCATED;
-  QRANGEIN;
-  QRANGEEX;
-  QANYTHING;
-  QDATE;
+  OPERATOR,
+  ATOM,
+  MODIFIER,
+  TMODIFIER,
+  CLAUSE,
+  FIELD,
+  FUZZY,
+  BOOST,
+  QNORMAL,
+  QPHRASE,
+  QPHRASETRUNC,
+  QTRUNCATED,
+  QRANGEIN,
+  QRANGEEX,
+  QANYTHING,
+  QDATE
 }
-
-// java-specific and error recovery-unfriendly details....
-
-@header{
-  package org.apache.lucene.queryparser.flexible.aqp.parser;
-}
-@lexer::header {
-  package org.apache.lucene.queryparser.flexible.aqp.parser;
-}
-
-// this is for exceptions on lexer level - we are preventing error
-// recovery (ANTLRv3 does not seem to have a better way to modify
-// the default behaviour - eg. from a parent abstract class)
-@lexer::members {
-  public void recover(RecognitionException re) {
-    // throw unchecked exception
-    throw new RuntimeException(re);
-  }
-}
-
-// ...below this point, language agnostic EBNF grammar lives.
 
 mainQ :
   clauseOr+ EOF -> ^(OPERATOR["DEFOP"] clauseOr+)
@@ -100,24 +77,22 @@ mainQ :
 
 
 clauseOr
-  : (first=clauseAnd -> $first) (or others=clauseAnd -> ^(OPERATOR["OR"] clauseAnd+ ))*
+  : (first=clauseAnd -> $first) (or_ others=clauseAnd -> ^(OPERATOR["OR"] clauseAnd+ ))*
   ;
 
 clauseAnd
-  : (first=clauseNot  -> $first) (and others=clauseNot -> ^(OPERATOR["AND"] clauseNot+ ))*
+  : (first=clauseNot  -> $first) (and_ others=clauseNot -> ^(OPERATOR["AND"] clauseNot+ ))*
   ;
 
 clauseNot
-  : (first=clauseBasic -> $first) (not others=clauseBasic -> ^(OPERATOR["NOT"] clauseBasic+) )*
+  : (first=clauseBasic -> $first) (not_ others=clauseBasic -> ^(OPERATOR["NOT"] clauseBasic+) )*
   ;
 
 clauseBasic
   :
-  (modifier LPAREN clauseOr+ RPAREN )=> modifier? LPAREN clauseOr+ RPAREN term_modifier?
+  modifier? LPAREN clauseOr+ RPAREN term_modifier?
    -> ^(CLAUSE ^(MODIFIER modifier? ^(TMODIFIER term_modifier? ^(OPERATOR["DEFOP"] clauseOr+)))) // Default operator
-  | (LPAREN clauseOr+ RPAREN term_modifier)=> modifier? LPAREN clauseOr+ RPAREN term_modifier?
-   -> ^(CLAUSE ^(MODIFIER modifier? ^(TMODIFIER term_modifier? ^(OPERATOR["DEFOP"] clauseOr+)))) // Default operator
-  | (LPAREN  )=> LPAREN clauseOr+ RPAREN
+  | LPAREN clauseOr+ RPAREN
    -> clauseOr+
   | atom
   ;
@@ -205,17 +180,17 @@ multiDefault
 
 multiOr
   :
-  (first=multiAnd  -> $first) (or others=multiAnd-> ^(OPERATOR["OR"] multiAnd+ ))*
+  (first=multiAnd  -> $first) (or_ others=multiAnd-> ^(OPERATOR["OR"] multiAnd+ ))*
   ;
 
 multiAnd
   :
-  (first=multiNot  -> $first) (and others=multiNot -> ^(OPERATOR["AND"] multiNot+ ))*
+  (first=multiNot  -> $first) (and_ others=multiNot -> ^(OPERATOR["AND"] multiNot+ ))*
   ;
 
 multiNot
   :
-  (first=multiBasic  -> $first) (not others=multiBasic-> ^(not multiBasic+ ))*
+  (first=multiBasic  -> $first) (not_ others=multiBasic-> ^(not_ multiBasic+ ))*
   ;
 
 multiBasic
@@ -276,7 +251,7 @@ term_modifier :
     (CARAT b=NUMBER -> ^(BOOST $b) ^(FUZZY )
    )
   ( //syntactic predicate
-   (TILDE NUMBER )=>TILDE f=NUMBER -> ^(BOOST $b) ^(FUZZY $f)
+   TILDE f=NUMBER -> ^(BOOST $b) ^(FUZZY $f)
    | TILDE -> ^(BOOST $b) ^(FUZZY NUMBER["0.5"])
    )* // set the default value
 
@@ -284,7 +259,7 @@ term_modifier :
   // second alternative [only ~ | ~NUMBER]
   |
     (TILDE -> ^(BOOST) ^(FUZZY NUMBER["0.5"])) // set the default value
-    ((~(WS|TILDE|CARAT))=>f=NUMBER -> ^(BOOST) ^(FUZZY $f?) )* //replace the default but '~' must not be followed by WS
+    f=NUMBER -> ^(BOOST) ^(FUZZY $f?) )* //replace the default but '~' must not be followed by WS
 */
   ;
 
@@ -298,16 +273,16 @@ fuzzy :
   (NUMBER -> ^(FUZZY NUMBER))? //replace the default with user input
   ;
 
-not :
-  (AND NOT)=> AND NOT
+not_  :
+  AND NOT
   | NOT
   ;
 
-and   :
+and_  :
   AND
   ;
 
-or  :
+or_   :
   OR
   ;
 
@@ -333,7 +308,7 @@ COLON   : ':' ;  //this must NOT be fragment
 
 PLUS  : '+' ;
 
-MINUS : ('-'|'\!');
+MINUS : ('-'|'!');
 
 STAR  : '*' ;
 
@@ -370,7 +345,7 @@ WS  :   ( ' '
         | '\n'
         | '\u3000'
         )
-        {$channel=HIDDEN;}
+        -> skip
     ;
 
 /*
