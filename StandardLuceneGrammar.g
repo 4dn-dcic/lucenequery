@@ -233,34 +233,9 @@ modifier:
   PLUS -> PLUS["+"]
   | MINUS -> MINUS["-"];
 
-/*
-This terribly convoluted grammar is here because of weird AST rewrite rules
-and because we need to allow for default value when TILDE is not followed by
-anything
-
-This grammar has problem with following
-  : term^4~ 9999
-  where 999 is another term, not a fuzzy value
-*/
 term_modifier :
   TILDE CARAT? -> ^(BOOST CARAT?) ^(FUZZY TILDE)
   | CARAT TILDE? -> ^(BOOST CARAT) ^(FUZZY TILDE?)
-/*
-  // first alternative
-  (
-    (CARAT b=NUMBER -> ^(BOOST $b) ^(FUZZY )
-   )
-  ( //syntactic predicate
-   TILDE f=NUMBER -> ^(BOOST $b) ^(FUZZY $f)
-   | TILDE -> ^(BOOST $b) ^(FUZZY NUMBER["0.5"])
-   )* // set the default value
-
-  )
-  // second alternative [only ~ | ~NUMBER]
-  |
-    (TILDE -> ^(BOOST) ^(FUZZY NUMBER["0.5"])) // set the default value
-    f=NUMBER -> ^(BOOST) ^(FUZZY $f?) )* //replace the default but '~' must not be followed by WS
-*/
   ;
 
 boost :
