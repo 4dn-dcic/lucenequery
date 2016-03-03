@@ -6,10 +6,8 @@ cache:
 
 env:
   - TOXENV=py27
-  - TOXENV=py33
   - TOXENV=py34
   - TOXENV=pypy
-  - TOXENV=pypy3
 
 install:
   - bash travis-antlr4.sh
