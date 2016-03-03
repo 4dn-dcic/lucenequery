@@ -128,7 +128,7 @@ anything
   STAR COLON STAR
   ;
 
-range_term
+two_sided_range_term
   :
   start_type=(LBRACK|LCURLY)
   sep?
@@ -136,6 +136,11 @@ range_term
   sep?
   ( TO? sep? b=range_value sep? )?
   end_type=(RBRACK|RCURLY)
+  ;
+
+range_term
+  :
+  two_sided_range_term
   ;
 
 range_value
