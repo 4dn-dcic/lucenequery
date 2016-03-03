@@ -72,7 +72,7 @@ tokens {
 }
 
 mainQ :
-  sep? clauseDefault sep? EOF
+  sep? clause=clauseDefault sep? EOF
   ;
 
 clauseDefault
