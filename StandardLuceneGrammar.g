@@ -72,14 +72,14 @@ tokens {
 }
 
 mainQ :
-  clauseDefault EOF
+  sep? clauseDefault sep? EOF
   ;
 
 clauseDefault
   :
   //m:(a b AND c OR d OR e)
   // without duplicating the rules (but it allows recursion)
-  clauseOr (clauseOr)*
+  clauseOr (sep? clauseOr)*
   ;
 
 clauseOr
@@ -96,8 +96,8 @@ clauseNot
 
 clauseBasic
   :
-  modifier? LPAREN clauseDefault RPAREN term_modifier?
-  | atom
+  sep? modifier? LPAREN clauseDefault sep? RPAREN term_modifier?
+  | sep? atom
   ;
 
 atom
@@ -108,7 +108,7 @@ atom
 
 field
   :
-  TERM_NORMAL COLON
+  TERM_NORMAL COLON sep?
   ;
 
 value
@@ -131,8 +131,10 @@ anything
 range_term
   :
   start_type=(LBRACK|LCURLY)
+  sep?
   (a=range_value)
-  ( TO? b=range_value )?
+  sep?
+  ( TO? sep? b=range_value sep? )?
   end_type=(RBRACK|RCURLY)
   ;
 
@@ -148,7 +150,7 @@ range_value
 
 multi_value
   :
-  LPAREN clauseDefault RPAREN
+  LPAREN clauseDefault sep? RPAREN
   ;
 
 normal
@@ -175,6 +177,7 @@ modifier:
   PLUS
   | MINUS;
 
+
 term_modifier :
   boost fuzzy?
   | fuzzy boost?
@@ -191,16 +194,16 @@ fuzzy :
   ;
 
 not_  :
-  AND NOT
-  | NOT
+  sep? AND sep? NOT
+  | sep? NOT
   ;
 
 and_  :
-  AND
+  sep? AND
   ;
 
 or_   :
-  OR
+  sep? OR
   ;
 
 date  :
@@ -255,13 +258,14 @@ AND   : (('a' | 'A') ('n' | 'N') ('d' | 'D') | (AMPER AMPER?)) ;
 OR  : (('o' | 'O') ('r' | 'R') | (VBAR VBAR?));
 NOT   : ('n' | 'N') ('o' | 'O') ('t' | 'T');
 
+sep : WS+;
+
 WS  :   ( ' '
         | '\t'
         | '\r'
         | '\n'
         | '\u3000'
         )
-        -> skip
     ;
 
 /*
