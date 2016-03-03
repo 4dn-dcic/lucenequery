@@ -1,0 +1,24 @@
+language: python
+sudo: false
+cache:
+  directories:
+  - $HOME/antlr4
+
+env:
+  - TOXENV=py27
+  - TOXENV=py33
+  - TOXENV=py34
+  - TOXENV=pypy
+  - TOXENV=pypy3
+
+install:
+  - bash travis-antlr4.sh
+  - export PATH="$HOME/antlr4/bin:$PATH"
+  - antlr4
+  - make
+  - travis_retry pip install -U setuptools
+  - travis_retry pip install tox
+  - travis_retry tox --notest
+
+script:
+  - tox
