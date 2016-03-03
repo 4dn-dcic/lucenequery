@@ -1,7 +1,7 @@
 grammar StandardLuceneGrammar;
 
 //
-//  This is a re-implementation of the standard lucene syntax with ANTLR3
+//  This is a re-implementation of the standard lucene syntax with ANTLR4
 //   http://lucene.apache.org/core/4_3_0/queryparser/index.html
 //
 //   The query syntax is complete and supports the same features as the
